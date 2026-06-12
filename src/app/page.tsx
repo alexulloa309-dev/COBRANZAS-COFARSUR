@@ -99,7 +99,7 @@ export default function Home() {
               </div>
               <div>
                 <div className="font-medium text-slate-900 dark:text-white">Ver Legales</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Revisar clientes con mora > 30 días</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Revisar clientes con mora &gt; 30 días</div>
               </div>
             </button>
             <button className="p-4 flex items-start gap-3 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-left group">
@@ -108,7 +108,7 @@ export default function Home() {
               </div>
               <div>
                 <div className="font-medium text-slate-900 dark:text-white">Próximos Vencimientos</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Gestionar clientes <= 30 días</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Gestionar clientes &lt;= 30 días</div>
               </div>
             </button>
           </div>
