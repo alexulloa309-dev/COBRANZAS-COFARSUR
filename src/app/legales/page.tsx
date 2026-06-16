@@ -1,38 +1,41 @@
 "use client";
 
-import React, { useState } from "react";
-import ChainAccordion, { Cliente } from "@/components/ChainAccordion";
-import { Search, Filter, AlertOctagon } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import ChainAccordion from "@/components/ChainAccordion";
+import { Search, Filter, AlertOctagon, RefreshCw } from "lucide-react";
 import ExportButton from "@/components/ExportButton";
-
-// Mock data for demo
-const mockCadenas = [
-  {
-    cadena: "Supermercados El Sol",
-    totalDeuda: 4500000,
-    clientes: [
-      { id: "1", nombre: "El Sol Sucursal Centro", zona: "Capital", diasMora: 45, montoVencido: 2000000, tipo: "Legal" as const },
-      { id: "2", nombre: "El Sol Sucursal Norte", zona: "Norte", diasMora: 60, montoVencido: 2500000, tipo: "Legal" as const },
-    ]
-  },
-  {
-    cadena: "Farmacias Salud",
-    totalDeuda: 1200000,
-    clientes: [
-      { id: "3", nombre: "Farmacia Salud 1", zona: "Sur", diasMora: 35, montoVencido: 1200000, tipo: "Legal" as const },
-    ]
-  },
-  {
-    cadena: "Kiosco Roberto (Individual)",
-    totalDeuda: 350000,
-    clientes: [
-      { id: "4", nombre: "Kiosco Roberto", zona: "Oeste", diasMora: 90, montoVencido: 350000, tipo: "Legal" as const },
-    ]
-  }
-];
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 export default function LegalesPage() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [cadenas, setCadenas] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/clientes/legales");
+      if (!res.ok) throw new Error("Error al cargar los datos");
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setCadenas(data);
+    } catch (e: any) {
+      setError(e.message || "Error desconocido");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const filtered = cadenas.filter((c) =>
+    c.cadena.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.clientes.some((cl: any) => cl.nombre.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -42,9 +45,18 @@ export default function LegalesPage() {
             <AlertOctagon className="w-6 h-6 text-rose-500" />
             Cartera en Legales
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Clientes y cadenas con mora mayor a 30 días.</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">
+            Clientes y cadenas con mora mayor a 30 días — {filtered.length} grupo(s) encontrado(s).
+          </p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={fetchData}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-sm"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Actualizar
+          </button>
           <ExportButton filename="legales_reporte.xlsx" />
         </div>
       </div>
@@ -52,10 +64,10 @@ export default function LegalesPage() {
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input 
-            type="text" 
-            placeholder="Buscar por cliente o cadena..." 
-            className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all dark:text-white placeholder:text-slate-400"
+          <input
+            type="text"
+            placeholder="Buscar por cliente o cadena..."
+            className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm focus:ring-2 focus:ring-rose-500 focus:border-transparent outline-none transition-all dark:text-white placeholder:text-slate-400"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -66,17 +78,44 @@ export default function LegalesPage() {
         </button>
       </div>
 
-      <div className="space-y-4">
-        {mockCadenas.map((cadena, i) => (
-          <ChainAccordion 
-            key={i}
-            cadena={cadena.cadena}
-            totalDeuda={cadena.totalDeuda}
-            clientes={cadena.clientes}
-            defaultOpen={i === 0}
-          />
-        ))}
-      </div>
+      {loading && (
+        <div className="flex justify-center py-20">
+          <LoadingSpinner />
+        </div>
+      )}
+
+      {error && (
+        <div className="text-center py-16 text-rose-500 bg-rose-50 dark:bg-rose-900/20 rounded-xl border border-rose-200 dark:border-rose-800">
+          <AlertOctagon className="w-8 h-8 mx-auto mb-2" />
+          <p className="font-medium">Error al cargar los datos</p>
+          <p className="text-sm mt-1">{error}</p>
+          <button onClick={fetchData} className="mt-4 px-4 py-2 bg-rose-500 text-white rounded-lg text-sm hover:bg-rose-600 transition-colors">
+            Reintentar
+          </button>
+        </div>
+      )}
+
+      {!loading && !error && filtered.length === 0 && (
+        <div className="text-center py-16 text-slate-400 dark:text-slate-600">
+          <AlertOctagon className="w-12 h-12 mx-auto mb-3 opacity-30" />
+          <p className="text-lg font-medium">No hay clientes en situación legal</p>
+          <p className="text-sm mt-1">No se encontraron clientes con mora mayor a 30 días.</p>
+        </div>
+      )}
+
+      {!loading && !error && filtered.length > 0 && (
+        <div className="space-y-4">
+          {filtered.map((cadena, i) => (
+            <ChainAccordion
+              key={i}
+              cadena={cadena.cadena}
+              totalDeuda={cadena.totalDeuda}
+              clientes={cadena.clientes}
+              defaultOpen={i === 0}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
