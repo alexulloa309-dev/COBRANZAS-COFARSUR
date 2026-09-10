@@ -40,20 +40,41 @@ export async function POST(request: Request) {
     // Leer el archivo
     const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
 
-    // Auto-detectar la hoja correcta: tiene que tener Id, Cliente, Venci Men 30, Dias Mora
+    // Auto-detectar la hoja y fila correcta de headers
+    // El archivo puede tener filas extra arriba ("Cofarsur", "DATOS DE CLIENTE")
+    // antes de los headers reales (Id, Cliente, Venci Men 30, etc.)
     let sheetData: any[] = [];
     let foundSheet = '';
 
     for (const sheetName of workbook.SheetNames) {
       const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 }) as any[][];
-      const headers = (rawRows[0] || []).map((h: any) => (h || '').toString().trim());
-      const hasId     = headers.includes('Id') || headers.includes('ID');
-      const hasCliente = headers.includes('Cliente');
-      const hasMonto  = headers.some(h => h.includes('Venci'));
+      
+      // Buscar en las primeras 5 filas dónde están los headers reales
+      let headerRowIndex = -1;
+      for (let ri = 0; ri < Math.min(5, rawRows.length); ri++) {
+        const row = (rawRows[ri] || []).map((h: any) => (h || '').toString().trim());
+        const hasId      = row.includes('Id') || row.includes('ID');
+        const hasCliente = row.includes('Cliente');
+        const hasMonto   = row.some((h: string) => h.includes('Venci'));
+        if (hasId && hasCliente && hasMonto) {
+          headerRowIndex = ri;
+          break;
+        }
+      }
 
-      if (hasId && hasCliente && hasMonto) {
-        // Construir el array de objetos con headers como keys
-        sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]) as any[];
+      if (headerRowIndex >= 0) {
+        // Reconstruir los datos usando esa fila como headers
+        const headers = (rawRows[headerRowIndex] || []).map((h: any) => (h || '').toString().trim());
+        sheetData = [];
+        for (let ri = headerRowIndex + 1; ri < rawRows.length; ri++) {
+          const row = rawRows[ri];
+          if (!row || !row[headers.indexOf('Id')] && !row[0]) continue;
+          const obj: any = {};
+          headers.forEach((h: string, i: number) => {
+            if (h) obj[h] = row[i] ?? null;
+          });
+          sheetData.push(obj);
+        }
         foundSheet = sheetName;
         break;
       }
