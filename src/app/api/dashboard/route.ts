@@ -1,68 +1,78 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-function formatCurrency(val: number): string {
+const EMPTY = {
+  totalVencido: '$0',
+  proximosVencer: '$0',
+  clientesMora: '0',
+  promesas: '0',
+};
+
+function fmt(val: number): string {
   if (val >= 1_000_000) return `$${(val / 1_000_000).toFixed(1)}M`;
   if (val >= 1_000) return `$${(val / 1_000).toFixed(0)}K`;
   return `$${val.toFixed(0)}`;
 }
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
-    // Total vencido (all)
-    const { data: allVenc, error: e1 } = await supabase
-      .from('vencimientos')
-      .select('monto_vencido, dias_mora');
+    // Verificar que hay credenciales reales
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    if (!supabaseUrl || supabaseUrl.includes('placeholder')) {
+      return NextResponse.json(EMPTY);
+    }
 
-    if (e1) throw e1;
-
-    let totalVencido = 0;
-    let totalProximos = 0;
-    let clientesMoraSet = new Set<string>();
-    let clientesIds: string[] = [];
-
-    // We need client IDs to count unique clients in mora
-    const { data: allVencFull, error: e1b } = await supabase
+    // Una sola query para todo lo que necesitamos
+    const { data, error } = await supabase
       .from('vencimientos')
       .select('monto_vencido, dias_mora, cliente_id');
 
-    if (e1b) throw e1b;
+    if (error) {
+      console.error('Supabase error:', error.message);
+      return NextResponse.json(EMPTY);
+    }
 
-    (allVencFull || []).forEach((v: any) => {
+    let totalVencido = 0;
+    let totalProximos = 0;
+    const clientesMoraSet = new Set<string>();
+
+    (data || []).forEach((v: any) => {
       const monto = Number(v.monto_vencido) || 0;
-      const dias = Number(v.dias_mora) || 0;
-      
+      const dias  = Number(v.dias_mora)     || 0;
+
       totalVencido += monto;
-      
+
       if (dias > 0 && dias <= 30) {
         totalProximos += monto;
       }
-      
-      if (dias > 0) {
-        clientesMoraSet.add(v.cliente_id);
+
+      if (dias > 0 && v.cliente_id) {
+        clientesMoraSet.add(String(v.cliente_id));
       }
     });
 
-    // Count promesas
-    const { count: promesasCount, error: e2 } = await supabase
-      .from('promesas_pago')
-      .select('*', { count: 'exact', head: true });
-
-    if (e2) throw e2;
+    // Promesas (no crashear si falla)
+    let promesasCount = 0;
+    try {
+      const { count } = await supabase
+        .from('promesas_pago')
+        .select('*', { count: 'exact', head: true });
+      promesasCount = count || 0;
+    } catch {
+      // tabla vacía o no existe — ignorar
+    }
 
     return NextResponse.json({
-      totalVencido: formatCurrency(totalVencido),
-      proximosVencer: formatCurrency(totalProximos),
-      clientesMora: String(clientesMoraSet.size),
-      promesas: String(promesasCount || 0),
+      totalVencido:   fmt(totalVencido),
+      proximosVencer: fmt(totalProximos),
+      clientesMora:   String(clientesMoraSet.size),
+      promesas:       String(promesasCount),
     });
-  } catch (error: any) {
-    console.error('Error fetching dashboard stats:', error);
-    return NextResponse.json({
-      totalVencido: "$0",
-      proximosVencer: "$0",
-      clientesMora: "0",
-      promesas: "0",
-    });
+
+  } catch (err: any) {
+    console.error('Dashboard error:', err?.message || err);
+    return NextResponse.json(EMPTY);
   }
 }

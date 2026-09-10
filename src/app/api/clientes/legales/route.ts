@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     // Buscar vencimientos con mora > 30 días, con info del cliente
