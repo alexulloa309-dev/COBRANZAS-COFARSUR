@@ -161,11 +161,11 @@ export default function Home() {
           <div className="space-y-3 text-sm text-slate-600 dark:text-slate-400">
             <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
               <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 flex items-center justify-center text-xs font-bold">1</span>
-              <p>Hacé clic en <strong>&quot;Subir Excel&quot;</strong> y seleccioná los dos archivos: <em>Análisis de Clientes</em> e <em>Informe de Crédito Tabulado</em>.</p>
+              <p>Hacé clic en <strong>&quot;Subir Excel&quot;</strong> y seleccioná el archivo <em>Análisis de Clientes</em> del día.</p>
             </div>
             <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
               <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 flex items-center justify-center text-xs font-bold">2</span>
-              <p>El sistema cruza los datos automáticamente y los guarda en la base de datos.</p>
+              <p>El sistema filtra automáticamente los clientes activos con deuda y los guarda en la base de datos.</p>
             </div>
             <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
               <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 flex items-center justify-center text-xs font-bold">3</span>
