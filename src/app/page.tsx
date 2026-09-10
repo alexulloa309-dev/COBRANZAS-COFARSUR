@@ -56,7 +56,26 @@ export default function Home() {
         body: formData,
       });
 
-      const data = await res.json();
+      // Manejar respuesta vacía (puede pasar si el servidor tarda demasiado)
+      const text = await res.text();
+      if (!text) {
+        setUploadStatus({
+          message: "El servidor tardó demasiado en responder. Intentá subir un archivo más pequeño o esperá unos segundos y volvé a intentarlo.",
+          type: "error",
+        });
+        return;
+      }
+
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        setUploadStatus({
+          message: "Error inesperado al procesar la respuesta del servidor.",
+          type: "error",
+        });
+        return;
+      }
 
       if (res.ok && data.success) {
         setUploadStatus({

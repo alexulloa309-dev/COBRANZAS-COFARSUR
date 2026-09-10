@@ -135,33 +135,38 @@ export async function POST(request: Request) {
 
     const clientesArray = Array.from(clientesToInsert.values());
 
-    // Insertar clientes
-    if (clientesArray.length > 0) {
-      const { error: errorClientes } = await supabase
+    // ── Insertar clientes en lotes de 200 ─────────────────────────
+    const BATCH = 200;
+    for (let i = 0; i < clientesArray.length; i += BATCH) {
+      const batch = clientesArray.slice(i, i + BATCH);
+      const { error: errC } = await supabase
         .from('clientes')
-        .upsert(clientesArray, { onConflict: 'cliente_id' });
-      if (errorClientes) {
-        console.error('Error insertando clientes:', errorClientes);
+        .upsert(batch, { onConflict: 'cliente_id' });
+      if (errC) {
+        console.error('Error insertando clientes lote', i, errC);
         return NextResponse.json(
-          { error: 'Error al guardar clientes en base de datos', details: errorClientes.message },
+          { error: 'Error al guardar clientes', details: errC.message },
           { status: 500 }
         );
       }
     }
 
-    // Limpiar vencimientos anteriores e insertar nuevos
+    // ── Limpiar y reinsertar vencimientos en lotes de 200 ─────────
     if (vencimientosToInsert.length > 0) {
       await supabase.from('vencimientos').delete().neq('dias_mora', -999);
 
-      const { error: errorVenc } = await supabase
-        .from('vencimientos')
-        .insert(vencimientosToInsert);
-      if (errorVenc) {
-        console.error('Error insertando vencimientos:', errorVenc);
-        return NextResponse.json(
-          { error: 'Error al guardar vencimientos en base de datos', details: errorVenc.message },
-          { status: 500 }
-        );
+      for (let i = 0; i < vencimientosToInsert.length; i += BATCH) {
+        const batch = vencimientosToInsert.slice(i, i + BATCH);
+        const { error: errV } = await supabase
+          .from('vencimientos')
+          .insert(batch);
+        if (errV) {
+          console.error('Error insertando vencimientos lote', i, errV);
+          return NextResponse.json(
+            { error: 'Error al guardar vencimientos', details: errV.message },
+            { status: 500 }
+          );
+        }
       }
     }
 
